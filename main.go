@@ -25,7 +25,9 @@ func main() {
 	}
 	log.Println("Configuration loaded successfully.")
 
-	database.EnsureDatabaseExists("weatherapp", cfg.PostgresConnectionString)
+	if err = database.EnsureDatabaseExists("weatherapp", cfg.PostgresConnectionString); err != nil {
+		log.Fatalf("Failed to ensure database existence: %v", err)
+	}
 	log.Println("Correct database existance ensured.")
 
 	// Migrate Database

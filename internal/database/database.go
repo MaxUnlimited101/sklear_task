@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -78,11 +79,15 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 	}
 	log.Println("Successfully connected to default database.")
 
-	createDBSQL := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)
+	createDBSQL := fmt.Sprintf("CREATE DATABASE %s", dbName)
 
 	log.Printf("Executing: %s", createDBSQL)
 	_, err = db.Exec(createDBSQL)
 	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			log.Printf("Database '%s' already exists, skipping creation.", dbName)
+			return nil // Database already exists, no error
+		}
 		return fmt.Errorf("failed to execute CREATE DATABASE: %w", err)
 	}
 
