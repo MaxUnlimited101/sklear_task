@@ -87,16 +87,16 @@ func main() {
 		),
 	)
 	// debug task
-	_, _ = s.NewJob(
-		gocron.DurationJob(time.Second*20),
-		gocron.NewTask(
-			func() {
-				log.Print("Running scheduled task every 20 seconds...")
-				taskFunc()
-			},
-		),
-	)
-	s.Start()
+	// _, _ = s.NewJob(
+	// 	gocron.DurationJob(time.Second*20),
+	// 	gocron.NewTask(
+	// 		func() {
+	// 			log.Print("Running scheduled task every 20 seconds...")
+	// 			taskFunc()
+	// 		},
+	// 	),
+	// )
+	// s.Start()
 
 	// Graceful Shutdown
 	// Create a channel to listen for OS signals
