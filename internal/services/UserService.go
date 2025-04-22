@@ -16,11 +16,11 @@ type IUserService interface {
 }
 
 type UserService struct {
-	DB *database.DB
+	DB database.IDB
 }
 
 // NewUserService creates a new UserService instance
-func NewUserService(db *database.DB) *UserService {
+func NewUserService(db database.IDB) *UserService {
 	return &UserService{DB: db}
 }
 
@@ -29,6 +29,15 @@ func (s *UserService) GetUserByID(id int) (*models.User, error) {
 	user, err := s.DB.GetUserByID(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+	return user, nil
+}
+
+// GetUserByEmail retrieves a user by their email
+func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
+	user, err := s.DB.GetUserByEmail(email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 	return user, nil
 }

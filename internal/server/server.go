@@ -13,25 +13,17 @@ import (
 func NewRouter(handler *handlers.Handler) *mux.Router {
 	r := mux.NewRouter()
 
-	// // Define your routes and map them to handler methods
-	// // POST endpoint to create a subscription (and user if not exists)
-	// r.HandleFunc("/subscriptions", handler.HandlePostSubscription).Methods("POST")
-
-	// // GET endpoint to get subscriptions for a specific user
-	// // The {userID} is a path variable captured by mux
-	// r.HandleFunc("/users/{userID}/subscriptions", handler.HandleGetUserSubscriptions).Methods("GET")
+	r.HandleFunc("/subscribe", handler.PostSubscriptionHandler).Methods("POST")
 
 	r.HandleFunc("/weather", handler.GetWeatherHandler).Methods("GET")
+
+	r.HandleFunc("/user", handler.PostUserHandler).Methods("POST")
 
 	// Add a simple health check endpoint
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
-
-	// Optional: Add middleware here
-	// r.Use(middleware.LoggingMiddleware)
-	// r.Use(handlers.JSONContentTypeMiddleware)
 
 	return r
 }

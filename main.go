@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-co-op/gocron/v2"
 	"maxcool.com/weatherapp/internal/config"
 	"maxcool.com/weatherapp/internal/database"
 	"maxcool.com/weatherapp/internal/handlers"
@@ -42,7 +43,7 @@ func main() {
 	log.Println("Database connection established.")
 
 	// Create Handlers with Dependencies
-	appHandler := handlers.NewHandler(services.NewUserService(db), services.NewSubscriptionService(db), cfg)
+	appHandler := handlers.NewHandler(services.NewUserService(db), services.NewSubscriptionService(db, cfg), cfg)
 
 	// Setup Router and Server
 	router := server.NewRouter(appHandler)
@@ -55,6 +56,47 @@ func main() {
 			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
+
+	// Create a new scheduler instance
+	s, err := gocron.NewScheduler()
+	if err != nil {
+		log.Fatalf("Failed to create scheduler: %v", err)
+	}
+	defer func() {
+		_ = s.Shutdown()
+	}()
+
+	// Define the task function
+	taskFunc := func() {
+		log.Println("Running user notification task...")
+		if err := appHandler.SubscriptionService.SendNotificationToUsers(); err != nil {
+			log.Printf("Error sending notifications: %v", err)
+		}
+	}
+
+	// Schedule the task
+	_, _ = s.NewJob(
+		gocron.DailyJob(
+			1,
+			gocron.NewAtTimes(
+				gocron.NewAtTime(12, 0, 0),
+			),
+		),
+		gocron.NewTask(
+			taskFunc,
+		),
+	)
+	// debug task
+	_, _ = s.NewJob(
+		gocron.DurationJob(time.Second*20),
+		gocron.NewTask(
+			func() {
+				log.Print("Running scheduled task every 20 seconds...")
+				taskFunc()
+			},
+		),
+	)
+	s.Start()
 
 	// Graceful Shutdown
 	// Create a channel to listen for OS signals

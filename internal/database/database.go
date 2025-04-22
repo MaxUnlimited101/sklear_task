@@ -14,6 +14,28 @@ import (
 	"maxcool.com/weatherapp/internal/models"
 )
 
+type IDB interface {
+	// User methods
+	GetUserByID(userID int) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
+	CreateUser(user *models.User) (int, error)
+	UpdateUser(user *models.User) error
+	DeleteUser(userID int) error
+
+	// Subscription methods
+	CreateSubscription(sub *models.Subscription) (int, error)
+	GetSubscriptionByID(subID int) (*models.Subscription, error)
+	UpdateSubscription(sub *models.Subscription) error
+	DeleteSubscription(subID int) error
+	GetSubscriptions() ([]models.Subscription, error)
+	GetSubscriptionsByUserID(userID int) ([]models.Subscription, error)
+
+	// Notification methods
+	CreateNotification(notification *models.Notification) (int, error)
+
+	Close()
+}
+
 // DB struct holds the database connection pool
 type DB struct {
 	SQL *sql.DB
@@ -64,7 +86,7 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 
 	// Reconstruct the connection string for the default database
 	connectURL := u.String()
-	log.Printf("Attempting to connect to default DB: %s", connectURL)
+	log.Printf("Attempting to connect to default DB with the `postgres` account")
 
 	// Connect to the default database
 	db, err := sql.Open("pgx", connectURL)
@@ -103,8 +125,8 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 func (d *DB) CreateUser(user *models.User) (int, error) {
 	var userID int
 	err := d.SQL.QueryRow(
-		"INSERT INTO users (password, email) VALUES ($1, $2) RETURNING id",
-		user.Password, user.Email,
+		"INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id",
+		user.Name, user.Email,
 	).Scan(&userID)
 
 	if err != nil {
@@ -119,9 +141,9 @@ func (d *DB) CreateUser(user *models.User) (int, error) {
 func (d *DB) GetUserByEmail(email string) (*models.User, error) {
 	user := &models.User{} // Create an empty user struct
 	err := d.SQL.QueryRow(
-		"SELECT id, password, email FROM users WHERE email = $1",
+		"SELECT id, name, email FROM users WHERE email = $1",
 		email,
-	).Scan(&user.Id, &user.Password, &user.Email)
+	).Scan(&user.Id, &user.Name, &user.Email)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -137,8 +159,8 @@ func (d *DB) GetUserByEmail(email string) (*models.User, error) {
 func (d *DB) CreateSubscription(sub *models.Subscription) (int, error) {
 	var subID int
 	err := d.SQL.QueryRow(
-		"INSERT INTO subscriptions (user_id, city, condition) VALUES ($1, $2, $3) RETURNING id",
-		sub.UserId, sub.City, sub.Condition,
+		"INSERT INTO subscriptions (user_id, city, condition, user_email) VALUES ($1, $2, $3, $4) RETURNING id",
+		sub.UserId, sub.City, sub.Condition, sub.UserEmail,
 	).Scan(&subID)
 
 	if err != nil {
@@ -182,9 +204,9 @@ func (d *DB) GetSubscriptionsByUserID(userID int) ([]models.Subscription, error)
 func (d *DB) GetUserByID(userID int) (*models.User, error) {
 	user := &models.User{}
 	err := d.SQL.QueryRow(
-		"SELECT id, password, email FROM users WHERE id = $1",
+		"SELECT id, name, email FROM users WHERE id = $1",
 		userID,
-	).Scan(&user.Id, &user.Password, &user.Email)
+	).Scan(&user.Id, &user.Name, &user.Email)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -199,8 +221,8 @@ func (d *DB) GetUserByID(userID int) (*models.User, error) {
 // Returns an error if the update fails
 func (d *DB) UpdateUser(user *models.User) error {
 	_, err := d.SQL.Exec(
-		"UPDATE users SET password = $1, email = $2 WHERE id = $3",
-		user.Password, user.Email, user.Id,
+		"UPDATE users SET name = $1, email = $2 WHERE id = $3",
+		user.Name, user.Email, user.Id,
 	)
 
 	if err != nil {
@@ -268,4 +290,49 @@ func (d *DB) DeleteSubscription(subID int) error {
 		return fmt.Errorf("failed to delete subscription: %w", err)
 	}
 	return nil
+}
+
+// GetSubscriptions retrieves all subscriptions from the database
+// Returns a slice of subscriptions or an error if the query fails
+func (d *DB) GetSubscriptions() ([]models.Subscription, error) {
+	rows, err := d.SQL.Query("SELECT id, user_id, city, condition, user_email condition FROM subscriptions")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get subscriptions: %w", err)
+	}
+	defer rows.Close()
+
+	subscriptions := []models.Subscription{}
+
+	for rows.Next() {
+		var sub models.Subscription
+
+		if err := rows.Scan(&sub.Id, &sub.UserId, &sub.City, &sub.Condition, &sub.UserEmail); err != nil {
+			log.Printf("Error scanning subscription row: %v", err) // Log the error but try to continue
+			continue                                               // Skip this row
+		}
+		subscriptions = append(subscriptions, sub)
+	}
+
+	// Check for errors encountered during row iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during subscriptions iteration: %w", err)
+	}
+
+	return subscriptions, nil
+}
+
+// CreateNotification inserts a new notification into the database
+// Returns the ID of the newly created notification
+func (d *DB) CreateNotification(notification *models.Notification) (int, error) {
+	var notificationID int
+	err := d.SQL.QueryRow(
+		"INSERT INTO notifications (user_id, subscription_id, sent_at) VALUES ($1, $2, $3) RETURNING id",
+		notification.UserId, notification.SubscriptionId, notification.SentAt,
+	).Scan(&notificationID)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to create notification: %w", err)
+	}
+	notification.Id = notificationID
+	return notificationID, nil
 }

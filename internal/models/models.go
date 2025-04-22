@@ -1,10 +1,12 @@
 // internal/models/models.go
 package models
 
+import "time"
+
 type User struct {
-	Id       int    `json:"id"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type Subscription struct {
@@ -12,6 +14,14 @@ type Subscription struct {
 	UserId    int    `json:"user_id"`
 	City      string `json:"city"`
 	Condition string `json:"condition"`
+	UserEmail string `json:"user_email"`
+}
+
+type Notification struct {
+	Id             int       `json:"id"`
+	UserId         int       `json:"user_id"`
+	SubscriptionId int       `json:"subscription_id"`
+	SentAt         time.Time `json:"sent_at"`
 }
 
 type WeatherResponse struct {

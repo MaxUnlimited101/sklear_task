@@ -13,6 +13,7 @@ type Config struct {
 	OpenWeatherMapAPIKey     string
 	PostgresConnectionString string
 	ServerPort               string
+	ResendApiKey             string
 }
 
 func LoadConfig() (*Config, error) {
@@ -25,6 +26,7 @@ func LoadConfig() (*Config, error) {
 		PostgresConnectionString: os.Getenv("POSTGRES_CONNECTION_STRING"),
 		OpenWeatherMapAPIKey:     os.Getenv("OPENWEATHERMAP_API_KEY"),
 		ServerPort:               os.Getenv("PORT"),
+		ResendApiKey:             os.Getenv("RESEND_API_KEY"),
 	}
 
 	// Add basic validation

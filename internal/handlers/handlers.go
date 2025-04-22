@@ -41,49 +41,43 @@ func SendJsonResponse(w http.ResponseWriter, statusCode int, data any) {
 
 // Handler struct holds dependencies for handlers
 type Handler struct {
-	userService         services.IUserService
-	subscriptionService services.ISubscriptionService
-	config              *config.Config
+	UserService         services.IUserService
+	SubscriptionService services.ISubscriptionService
+	Config              *config.Config
 }
 
 // NewHandler Creates a new Handler instance
 func NewHandler(userServicer services.IUserService, subscriptionService services.ISubscriptionService, config *config.Config) *Handler {
-	return &Handler{userService: userServicer, subscriptionService: subscriptionService, config: config}
+	return &Handler{UserService: userServicer, SubscriptionService: subscriptionService, Config: config}
 }
 
 // --- Endpoints ---
 
-const openweathermapAPIBaseUrl = "https://api.openweathermap.org/data/2.5/weather"
-
 func (h *Handler) GetWeatherHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	query := r.URL.Query()
 	city := query.Get("city")
 
-	// Make a request to the OpenWeatherMap API
-	url := openweathermapAPIBaseUrl + "?q=" + city + "&appid=" + h.config.OpenWeatherMapAPIKey + "&units=metric"
-	log.Print("GET ", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		http.Error(w, "Error fetching weather data", http.StatusInternalServerError)
-		log.Fatal("Error fetching weather data: ", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Error fetching weather data", resp.StatusCode)
-		log.Fatal("Error fetching weather data: ", err)
+	// Validate the city parameter
+	if city == "" || len(city) == 0 {
+		http.Error(w, "City parameter is required", http.StatusBadRequest)
+		log.Println("City parameter is required")
 		return
 	}
 
-	// Read the response body
-	var weatherResponse models.WeatherResponse
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&weatherResponse)
+	if f, err := h.SubscriptionService.CheckWhetherCityExists(city); err == nil && !f {
+		http.Error(w, "City not found", http.StatusNotFound)
+		log.Println("City not found: ", city)
+		return
+	} else {
+		if err != nil {
+			log.Println("Failed to check city existence: ", err)
+		}
+	}
+
+	weatherResponse, err := h.SubscriptionService.GetWeather(city)
 	if err != nil {
-		http.Error(w, "Error decoding weather data", http.StatusInternalServerError)
-		log.Fatal("Error decoding weather data: ", err)
+		http.Error(w, "Failed to fetch weather data", http.StatusInternalServerError)
+		log.Println("Failed to fetch weather data: ", err)
 		return
 	}
 
@@ -97,4 +91,60 @@ func (h *Handler) GetWeatherHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendJsonResponse(w, http.StatusOK, response)
+}
+
+func (h *Handler) PostSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	var subscription models.Subscription
+	if err := json.NewDecoder(r.Body).Decode(&subscription); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		log.Println("Invalid request payload: ", err)
+		return
+	}
+
+	if err := Validate(subscription); err != nil {
+		http.Error(w, "Validation failed", http.StatusBadRequest)
+		log.Println("Validation failed: ", err)
+		return
+	}
+
+	if f, err := h.SubscriptionService.CheckWhetherCityExists(subscription.City); err == nil && !f {
+		http.Error(w, "City not found", http.StatusNotFound)
+		log.Println("City not found: ", subscription.City)
+		return
+	} else {
+		if err != nil {
+			log.Println("Failed to check city existence: ", err)
+		}
+	}
+
+	if err := h.SubscriptionService.CreateSubscription(&subscription); err != nil {
+		http.Error(w, "Failed to create subscription", http.StatusInternalServerError)
+		log.Println("Failed to create subscription: ", err)
+		return
+	}
+
+	SendJsonResponse(w, http.StatusCreated, "Subscription created successfully")
+}
+
+func (h *Handler) PostUserHandler(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		log.Println("Invalid request payload: ", err)
+		return
+	}
+
+	if err := Validate(user); err != nil {
+		http.Error(w, "Validation failed", http.StatusBadRequest)
+		log.Println("Validation failed: ", err)
+		return
+	}
+
+	if err := h.UserService.CreateUser(&user); err != nil {
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		log.Println("Failed to create user: ", err)
+		return
+	}
+
+	SendJsonResponse(w, http.StatusCreated, "User created successfully")
 }
