@@ -14,8 +14,8 @@ func TestGetSubscriptionsByUserID(t *testing.T) {
 	subscriptionService := services.NewSubscriptionService(mockDB, nil)
 
 	expectedSubscriptions := []models.Subscription{
-		{Id: 1, UserId: 1, City: "New York", Condition: "temperature:>30"},
-		{Id: 2, UserId: 1, City: "Los Angeles", Condition: "humidity:<50"},
+		{Id: 1, UserId: 1, City: "New York", Condition: "temperature:>:30"},
+		{Id: 2, UserId: 1, City: "Los Angeles", Condition: "humidity:<:50"},
 	}
 	mockDB.On("GetSubscriptionsByUserID", 1).Return(expectedSubscriptions, nil)
 
@@ -32,7 +32,7 @@ func TestCreateSubscription(t *testing.T) {
 	subscriptionService := services.NewSubscriptionService(mockDB, nil)
 
 	user := &models.User{Id: 1, Email: "test@example.com"}
-	subscription := &models.Subscription{City: "New York", Condition: "temperature:>30", UserEmail: "test@example.com"}
+	subscription := &models.Subscription{City: "New York", Condition: "temperature:>:30", UserEmail: "test@example.com"}
 
 	mockDB.On("GetUserByEmail", "test@example.com").Return(user, nil)
 	mockDB.On("CreateSubscription", subscription).Return(1, nil)
@@ -48,7 +48,7 @@ func TestCreateSubscription_UserNotFound(t *testing.T) {
 	mockDB := new(MockDB)
 	subscriptionService := services.NewSubscriptionService(mockDB, nil)
 
-	subscription := &models.Subscription{City: "New York", Condition: "temperature:>30", UserEmail: "test@example.com"}
+	subscription := &models.Subscription{City: "New York", Condition: "temperature:>:30", UserEmail: "test@example.com"}
 
 	mockDB.On("GetUserByEmail", "test@example.com").Return((*models.User)(nil), nil)
 
@@ -63,7 +63,7 @@ func TestUpdateSubscription(t *testing.T) {
 	mockDB := new(MockDB)
 	subscriptionService := services.NewSubscriptionService(mockDB, nil)
 
-	subscription := &models.Subscription{Id: 1, City: "New York", Condition: "temperature:>30"}
+	subscription := &models.Subscription{Id: 1, City: "New York", Condition: "temperature:>:30"}
 
 	mockDB.On("UpdateSubscription", subscription).Return(nil)
 
@@ -89,7 +89,7 @@ func TestGetSubscriptionByID(t *testing.T) {
 	mockDB := new(MockDB)
 	subscriptionService := services.NewSubscriptionService(mockDB, nil)
 
-	expectedSubscription := &models.Subscription{Id: 1, City: "New York", Condition: "temperature:>30"}
+	expectedSubscription := &models.Subscription{Id: 1, City: "New York", Condition: "temperature:>:30"}
 	mockDB.On("GetSubscriptionByID", 1).Return(expectedSubscription, nil)
 
 	subscription, err := subscriptionService.GetSubscriptionByID(1)
