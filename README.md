@@ -6,7 +6,7 @@ WeatherApp — це застосунок на Go, який дозволяє ко
 
 ## Архітектура
 
-Додаток побудований на Go, використувує Postgre, і сповіщає юзерів про погоду використовуючи [Resend](resend.com). Я зробив кастомні conditions, які (як на мене) не тяжко відтворити з гіпотетичного front-end. В БД зберігаються юзери, підписки (Subscriptions) і історія відправлених повідомлень (Notifications). Приклад condtition: "main:clear" (безхмарно),"temperature:<=:35", "humidity:>:23", "feels_like:==:12.3". Додаток складається з 3 шарів: DB+repository layer, Service layer, Handler/Controller layer; паттерн MVC. Це випробувані часом паттерни, тому я їх обрав.
+Додаток побудований на Go, використувує Postgre, і сповіщає юзерів про погоду використовуючи [Resend](https://resend.com). Я зробив кастомні conditions, які (як на мене) не тяжко відтворити з гіпотетичного front-end. В БД зберігаються юзери, підписки (Subscriptions) і історія відправлених повідомлень (Notifications). Приклад condtition: "main:clear" (безхмарно),"temperature:<=:35", "humidity:>:23", "feels_like:==:12.3". Додаток складається з 3 шарів: DB+repository layer, Service layer, Handler/Controller layer; паттерн MVC. Це випробувані часом паттерни, тому я їх обрав.
 
 ---
 
